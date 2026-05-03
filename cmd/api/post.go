@@ -166,7 +166,7 @@ func (app *application) postsContextMiddleware(next http.Handler) http.Handler {
 
 		ctx := r.Context()
 
-		post, err := app.store.Posts.GetById(ctx, id)
+		post, err := app.store.Posts.GetByID(ctx, id)
 
 		if err != nil {
 			switch {

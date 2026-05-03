@@ -52,7 +52,7 @@ func (s *PostStore) Create(ctx context.Context, post *Post) error {
 	return nil
 }
 
-func (s *PostStore) GetById(ctx context.Context, postId uuid.UUID) (*Post, error) {
+func (s *PostStore) GetByID(ctx context.Context, postId uuid.UUID) (*Post, error) {
 	query := `
 	SELECT id, content, title, tags, user_id, created_at, updated_at, version FROM posts WHERE id = $1`
 
