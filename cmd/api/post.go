@@ -26,6 +26,19 @@ type UpdatePostPayload struct {
 	Content *string `json:"content" validate:"omitempty,max=1000"`
 }
 
+// Createpost godoc
+//
+//	@Summary		Create Post
+//	@Description	Create Post
+//	@Tags			posts
+//	@Accept			json
+//	@Produce		json
+//	@Param			payload	body		CreatePostPayload	true	"Post Payload"
+//	@Success		200		{object}	store.Post
+//	@Failure		400		{object}	error
+//	@Failure		500		{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/posts [post]
 func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request) {
 	var payload CreatePostPayload
 
@@ -62,6 +75,22 @@ func (app *application) createPostHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// Getpost godoc
+//
+//	@Summary		Get a Post
+//	@Description	Get a Post by ID
+//	@Tags			posts
+//	@Accept			json
+//	@Produce		json
+//
+//	@Param			id	path		string	true	"Post ID"
+//
+//	@Success		200	{object}	store.Post
+//	@Failure		400	{object}	error
+//	@Failure		404	{object}	error
+//	@Failure		500	{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/posts/{id} [get]
 func (app *application) getPostHandler(w http.ResponseWriter, r *http.Request) {
 	post := getPostFromCtx(r)
 
@@ -80,6 +109,22 @@ func (app *application) getPostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Deletepost godoc
+//
+//	@Summary		Delete a Post
+//	@Description	Delete a Post
+//	@Tags			posts
+//	@Accept			json
+//	@Produce		json
+//
+//	@Param			id	path	string	true	"Post ID"
+//
+//	@Success		204
+//	@Failure		400	{object}	error
+//	@Failure		404	{object}	error
+//	@Failure		500	{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/posts/{id} [delete]
 func (app *application) deletePostHandler(w http.ResponseWriter, r *http.Request) {
 
 	postId := chi.URLParam(r, "postID")
@@ -109,6 +154,24 @@ func (app *application) deletePostHandler(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// Updatepost godoc
+//
+//	@Summary		Update a Post
+//	@Description	Update a Post
+//	@Tags			posts
+//	@Accept			json
+//	@Produce		json
+//
+//	@Param			id		path		string				true	"Post ID"
+//
+//	@Param			payload	body		UpdatePostPayload	true	"Post Payload"
+//	@Success		200		{object}	store.Post
+//	@Failure		400		{object}	error
+//	@Failure		401		{object}	error
+//	@Failure		404		{object}	error
+//	@Failure		500		{object}	error
+//	@Security		ApiKeyAuth
+//	@Router			/posts/{id} [patch]
 func (app *application) updatePostHandler(w http.ResponseWriter, r *http.Request) {
 	post := getPostFromCtx(r)
 
