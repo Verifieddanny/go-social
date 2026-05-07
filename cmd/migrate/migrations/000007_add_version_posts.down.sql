@@ -1,4 +1,4 @@
 ALTER TABLE 
-    POSTS 
+    posts 
 DROP 
     COLUMN version;

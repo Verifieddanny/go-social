@@ -1,9 +1,10 @@
 package main
 
 import (
-	"log"
+	"time"
 
 	_ "github.com/lib/pq"
+	"go.uber.org/zap"
 
 	"github.com/Verifieddanny/go-social/internal/db"
 	"github.com/Verifieddanny/go-social/internal/env"
@@ -44,7 +45,13 @@ func main() {
 			maxIdleConns: env.GetEnvAsInt("DM_MAX_IDLE_CONNS", 30),
 			maxIdleTime:  env.GetEnv("DM_MAX_IDLE_TIME", "15m"),
 		},
+		mail: mailConfig{
+			exp: time.Hour * 24 * 3,
+		},
 	}
+
+	logger := zap.Must(zap.NewProduction()).Sugar()
+	defer logger.Sync()
 
 	db, err := db.New(cfg.db.addr,
 		cfg.db.maxOpenConns,
@@ -52,21 +59,22 @@ func main() {
 		cfg.db.maxIdleTime)
 
 	if err != nil {
-		log.Panic(err)
+		logger.Fatal(err)
 	}
 
 	defer db.Close()
-	log.Println("Database connection pool established")
+	logger.Info("Database connection pool established")
 
 	store := store.NewStorage(db)
 
 	app := &application{
 		config: cfg,
 		store:  store,
+		logger: logger,
 	}
 
 	mux := app.mount()
 
-	log.Fatal(app.run(mux))
+	logger.Fatal(app.run(mux))
 
 }
