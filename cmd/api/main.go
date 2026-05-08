@@ -8,6 +8,7 @@ import (
 
 	"github.com/Verifieddanny/go-social/internal/db"
 	"github.com/Verifieddanny/go-social/internal/env"
+	"github.com/Verifieddanny/go-social/internal/mailer"
 	"github.com/Verifieddanny/go-social/internal/store"
 )
 
@@ -36,17 +37,22 @@ const currentVersion = "0.0.1"
 func main() {
 
 	cfg := config{
-		addr:   env.GetEnv("ADDR", ":8080"),
-		env:    env.GetEnv("ENV", "development"),
-		apiUrl: env.GetEnv("EXTERNAL_URL", "localhost:8080"),
+		addr:        env.GetEnv("ADDR", ":8080"),
+		env:         env.GetEnv("ENV", "development"),
+		apiUrl:      env.GetEnv("EXTERNAL_URL", "localhost:8080"),
+		frontendUrl: env.GetEnv("FRONTEND_URL", "http://localhost:3000"),
 		db: dbConfig{
-			addr:         env.GetEnv("DB_ADDR", "postgres://admin:adminpassword@localhost/social?sslmode=disable"),
+			addr:         env.GetEnv("DB_ADDR", ""),
 			maxOpenConns: env.GetEnvAsInt("DM_MAX_OPEN_CONNS", 30),
 			maxIdleConns: env.GetEnvAsInt("DM_MAX_IDLE_CONNS", 30),
 			maxIdleTime:  env.GetEnv("DM_MAX_IDLE_TIME", "15m"),
 		},
 		mail: mailConfig{
-			exp: time.Hour * 24 * 3,
+			exp:       time.Hour * 24 * 3,
+			fromEmail: env.GetEnv("FROM_EMAIL", "onboarding@resend.dev"),
+			resend: resendConfig{
+				apiKey: env.GetEnv("RESEND_API_KEY", ""),
+			},
 		},
 	}
 
@@ -66,11 +72,13 @@ func main() {
 	logger.Info("Database connection pool established")
 
 	store := store.NewStorage(db)
+	mailer := mailer.NewResend(cfg.mail.resend.apiKey, cfg.mail.fromEmail)
 
 	app := &application{
 		config: cfg,
 		store:  store,
 		logger: logger,
+		mailer: mailer,
 	}
 
 	mux := app.mount()

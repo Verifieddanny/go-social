@@ -30,6 +30,7 @@ type Storage struct {
 		GetByID(context.Context, uuid.UUID) (*User, error)
 		CreateAndInvite(context.Context, *User, string, time.Duration) error
 		Activate(context.Context, string) error
+		Delete(context.Context, uuid.UUID) error
 	}
 	Comments interface {
 		Create(context.Context, *Comment) error
