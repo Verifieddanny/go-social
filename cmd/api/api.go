@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Verifieddanny/go-social/docs"
+	"github.com/Verifieddanny/go-social/internal/db/auth"
 	"github.com/Verifieddanny/go-social/internal/mailer"
 	"github.com/Verifieddanny/go-social/internal/store"
 	"github.com/go-chi/chi/v5"
@@ -15,10 +16,11 @@ import (
 )
 
 type application struct {
-	config config
-	store  store.Storage
-	logger *zap.SugaredLogger
-	mailer *mailer.ResendMailer
+	config        config
+	store         store.Storage
+	logger        *zap.SugaredLogger
+	mailer        *mailer.ResendMailer
+	authenticator auth.Authenticator
 }
 
 type mailConfig struct {
@@ -38,6 +40,22 @@ type config struct {
 	apiUrl      string
 	mail        mailConfig
 	frontendUrl string
+	auth        authConfig
+}
+
+type authConfig struct {
+	basic basicConfig
+	token tokenConfig
+}
+
+type tokenConfig struct {
+	secret string
+	exp    time.Duration
+	iss    string
+}
+type basicConfig struct {
+	user string
+	pass string
 }
 
 type dbConfig struct {
@@ -58,7 +76,7 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Route("/v1", func(r chi.Router) {
-		r.Get("/health", app.healthcheck)
+		r.With(app.BasicAuthMiddleware()).Get("/health", app.healthcheck)
 
 		docsUrl := fmt.Sprintf("%s/v1/swagger/doc.json", app.config.addr)
 		r.Get("/swagger/*", httpSwagger.Handler(httpSwagger.URL(docsUrl)))
@@ -95,6 +113,7 @@ func (app *application) mount() http.Handler {
 
 		r.Route("/authentication", func(r chi.Router) {
 			r.Post("/user", app.registerUserHandler)
+			r.Post("/token", app.createTokenHandler)
 		})
 
 	})

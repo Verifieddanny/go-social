@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/Verifieddanny/go-social/internal/db"
+	"github.com/Verifieddanny/go-social/internal/db/auth"
 	"github.com/Verifieddanny/go-social/internal/env"
 	"github.com/Verifieddanny/go-social/internal/mailer"
 	"github.com/Verifieddanny/go-social/internal/store"
@@ -54,6 +55,17 @@ func main() {
 				apiKey: env.GetEnv("RESEND_API_KEY", ""),
 			},
 		},
+		auth: authConfig{
+			basic: basicConfig{
+				user: env.GetEnv("AUTH_BASIC_USER", "admin"),
+				pass: env.GetEnv("AUTH_BASIC_PASS", "admin"),
+			},
+			token: tokenConfig{
+				secret: env.GetEnv("AUTH_TOKEN_SECRET", "example"),
+				exp:    time.Hour * 24 * 3,
+				iss:    "gophersocial",
+			},
+		},
 	}
 
 	logger := zap.Must(zap.NewProduction()).Sugar()
@@ -74,11 +86,14 @@ func main() {
 	store := store.NewStorage(db)
 	mailer := mailer.NewResend(cfg.mail.resend.apiKey, cfg.mail.fromEmail)
 
+	jwtAuthenticator := auth.NewJWTAuthenticator(cfg.auth.token.secret, cfg.auth.token.iss, cfg.auth.token.iss)
+
 	app := &application{
-		config: cfg,
-		store:  store,
-		logger: logger,
-		mailer: mailer,
+		config:        cfg,
+		store:         store,
+		logger:        logger,
+		mailer:        mailer,
+		authenticator: jwtAuthenticator,
 	}
 
 	mux := app.mount()
