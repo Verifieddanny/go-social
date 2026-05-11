@@ -13,10 +13,6 @@ type userKey string
 
 const userCtx userKey = "user"
 
-type FollowUser struct {
-	UserID uuid.UUID `json:"user_id"`
-}
-
 // GetUser godoc
 //
 //	@Summary		Fetches a user profile
@@ -54,16 +50,15 @@ func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
 //	@Router			/users/{userID}/follow [put]
 func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request) {
 	followerUser := getUserFromContext(r)
-
-	// Revvert back  to auth userId from ctx
-	var payload FollowUser
-	if err := readJSON(w, r, &payload); err != nil {
+	followedID, err := uuid.Parse(chi.URLParam(r, "userID"))
+	if err != nil {
 		app.badRequestResponse(w, r, err)
+		return
 	}
 
 	ctx := r.Context()
 
-	if err := app.store.Followers.Follow(ctx, followerUser.ID, payload.UserID); err != nil {
+	if err := app.store.Followers.Follow(ctx, followerUser.ID, followedID); err != nil {
 		switch err {
 		case store.ErrConflict:
 			app.conflictResponse(w, r, err)
@@ -94,22 +89,15 @@ func (app *application) followUserHandler(w http.ResponseWriter, r *http.Request
 //	@Security		ApiKeyAuth
 //	@Router			/users/{userID}/unfollow [put]
 func (app *application) unfollowUserHandler(w http.ResponseWriter, r *http.Request) {
-	followUser := getUserFromContext(r)
-
-	//TODO: Revvert back  to auth userId from ctx
-	var payload FollowUser
-	if err := readJSON(w, r, &payload); err != nil {
-		app.badRequestResponse(w, r, err)
-	}
-
-	userID, err := uuid.Parse(payload.UserID.String())
-
+	followerUser := getUserFromContext(r)
+	unfollowedID, err := uuid.Parse(chi.URLParam(r, "userID"))
 	if err != nil {
 		app.badRequestResponse(w, r, err)
+		return
 	}
 
 	ctx := r.Context()
-	if err := app.store.Followers.Unfollow(ctx, followUser.ID, userID); err != nil {
+	if err := app.store.Followers.Unfollow(ctx, followerUser.ID, unfollowedID); err != nil {
 		app.internalServerError(w, r, err)
 		return
 	}

@@ -4,10 +4,13 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -72,6 +75,44 @@ func (p *password) Set(text string) error {
 	return nil
 }
 
+var ErrInvalidHash = errors.New("the encoded hash is not in the correct format")
+var ErrIncompatibleVersion = errors.New("incompatible version of argon2")
+
+func (p *password) Compare(plainText string) (bool, error) {
+	parts := strings.Split(string(p.hash), "$")
+	if len(parts) != 6 {
+		return false, ErrInvalidHash
+	}
+
+	var version int
+	_, err := fmt.Sscanf(parts[2], "v=%d", &version)
+	if err != nil || version != argon2.Version {
+		return false, ErrIncompatibleVersion
+	}
+
+	var memory uint32
+	var iterations uint32
+	var parallelism uint8
+	_, err = fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &memory, &iterations, &parallelism)
+	if err != nil {
+		return false, err
+	}
+
+	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
+	if err != nil {
+		return false, err
+	}
+
+	decodedHash, err := base64.RawStdEncoding.DecodeString(parts[5])
+	if err != nil {
+		return false, err
+	}
+
+	comparisonHash := argon2.IDKey([]byte(plainText), salt, iterations, memory, parallelism, uint32(len(decodedHash)))
+
+	return subtle.ConstantTimeCompare(decodedHash, comparisonHash) == 1, nil
+}
+
 type UserStore struct {
 	db *sql.DB
 }
@@ -108,7 +149,7 @@ func (s *UserStore) Create(ctx context.Context, tx *sql.Tx, user *User) error {
 	return nil
 }
 
-func (s *UserStore) GetByID(ctx context.Context, postId uuid.UUID) (*User, error) {
+func (s *UserStore) GetByID(ctx context.Context, userID uuid.UUID) (*User, error) {
 	query := `
 	SELECT id, email, Password, username, created_at 
 	FROM users
@@ -121,11 +162,11 @@ func (s *UserStore) GetByID(ctx context.Context, postId uuid.UUID) (*User, error
 	err := s.db.QueryRowContext(
 		ctx,
 		query,
-		postId,
+		userID,
 	).Scan(
 		&user.ID,
 		&user.Email,
-		&user.Password,
+		&user.Password.hash,
 		&user.Username,
 		&user.CreatedAt,
 	)
@@ -288,8 +329,7 @@ func (s *UserStore) delete(ctx context.Context, tx *sql.Tx, id uuid.UUID) error 
 	return nil
 }
 
-
-func (s  *UserStore) GetByEmail(ctx context.Context,email string) (*User, error) {
+func (s *UserStore) GetByEmail(ctx context.Context, email string) (*User, error) {
 	query := `
 	SELECT id, email, Password, username, created_at 
 	FROM users

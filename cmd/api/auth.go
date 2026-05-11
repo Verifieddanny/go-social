@@ -186,6 +186,18 @@ func (app *application) createTokenHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	isMatch, err := user.Password.Compare(payload.Password)
+
+	if err != nil {
+		app.unauthorizedResponse(w, r, err)
+		return
+	}
+
+	if !isMatch {
+		app.unauthorizedResponse(w, r, fmt.Errorf("Invalid Creds"))
+		return
+	}
+
 	claims := jwt.MapClaims{
 		"sub": user.ID,
 		"exp": time.Now().Add(app.config.auth.token.exp).Unix(),
@@ -199,11 +211,6 @@ func (app *application) createTokenHandler(w http.ResponseWriter, r *http.Reques
 		app.internalServerError(w, r, err)
 		return
 	}
-
-	// if err := user.Password.Compare(payload.Password); err != nil {
-	// 	app.unauthorizedResponse(w, r, err)
-	// 	return
-	// }
 
 	if err := app.jsonResponse(w, http.StatusCreated, token); err != nil {
 		app.internalServerError(w, r, err)

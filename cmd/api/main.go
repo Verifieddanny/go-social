@@ -43,7 +43,7 @@ func main() {
 		apiUrl:      env.GetEnv("EXTERNAL_URL", "localhost:8080"),
 		frontendUrl: env.GetEnv("FRONTEND_URL", "http://localhost:3000"),
 		db: dbConfig{
-			addr:         env.GetEnv("DB_ADDR", ""),
+			addr:         env.GetEnv("DB_ADDR", "postgres://admin:adminpassword@localhost/social?sslmode=disable"),
 			maxOpenConns: env.GetEnvAsInt("DM_MAX_OPEN_CONNS", 30),
 			maxIdleConns: env.GetEnvAsInt("DM_MAX_IDLE_CONNS", 30),
 			maxIdleTime:  env.GetEnv("DM_MAX_IDLE_TIME", "15m"),
@@ -52,7 +52,7 @@ func main() {
 			exp:       time.Hour * 24 * 3,
 			fromEmail: env.GetEnv("FROM_EMAIL", "onboarding@resend.dev"),
 			resend: resendConfig{
-				apiKey: env.GetEnv("RESEND_API_KEY", ""),
+				apiKey: env.GetEnv("RESEND_API_KEY", "re_7ee8e6KB_8RgFbCdzFubRoA4aZqp2pdcB"),
 			},
 		},
 		auth: authConfig{
