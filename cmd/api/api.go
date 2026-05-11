@@ -9,6 +9,7 @@ import (
 	"github.com/Verifieddanny/go-social/internal/db/auth"
 	"github.com/Verifieddanny/go-social/internal/mailer"
 	"github.com/Verifieddanny/go-social/internal/store"
+	"github.com/Verifieddanny/go-social/internal/store/cache"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
@@ -21,6 +22,7 @@ type application struct {
 	logger        *zap.SugaredLogger
 	mailer        *mailer.ResendMailer
 	authenticator auth.Authenticator
+	cacheStorage  cache.Storage
 }
 
 type mailConfig struct {
@@ -41,6 +43,14 @@ type config struct {
 	mail        mailConfig
 	frontendUrl string
 	auth        authConfig
+	redisCfg    redisCfg
+}
+
+type redisCfg struct {
+	addr    string
+	pw      string
+	db      int
+	enabled bool
 }
 
 type authConfig struct {
@@ -76,7 +86,8 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Route("/v1", func(r chi.Router) {
-		r.With(app.BasicAuthMiddleware()).Get("/health", app.healthcheck)
+		// r.With(app.BasicAuthMiddleware()).Get("/health", app.healthcheck)
+		r.Get("/health", app.healthcheck)
 
 		docsUrl := fmt.Sprintf("%s/v1/swagger/doc.json", app.config.addr)
 		r.Get("/swagger/*", httpSwagger.Handler(httpSwagger.URL(docsUrl)))
@@ -89,8 +100,8 @@ func (app *application) mount() http.Handler {
 				r.Use(app.postsContextMiddleware)
 
 				r.Get("/", app.getPostHandler)
-				r.Delete("/", app.deletePostHandler)
-				r.Patch("/", app.updatePostHandler)
+				r.Delete("/", app.checkPostOwnership("admin", app.deletePostHandler))
+				r.Patch("/", app.checkPostOwnership("moderator", app.updatePostHandler))
 				r.Route("/comment", func(r chi.Router) {
 					r.Post("/{userID}", app.createCommentHandler)
 				})

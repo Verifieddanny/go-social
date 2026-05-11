@@ -5,7 +5,6 @@ import (
 	"strconv"
 )
 
-
 func GetEnv(key, defaultValue string) string {
 	value, ok := os.LookupEnv(key)
 	if !ok {
@@ -21,6 +20,19 @@ func GetEnvAsInt(key string, defaultValue int) int {
 	}
 
 	value, err := strconv.Atoi(valueStr)
+	if err != nil {
+		return defaultValue
+	}
+	return value
+}
+
+func GetEnvAsBoolean(key string, defaultValue bool) bool {
+	valueStr, ok := os.LookupEnv(key)
+	if !ok {
+		return defaultValue
+	}
+
+	value, err := strconv.ParseBool(valueStr)
 	if err != nil {
 		return defaultValue
 	}

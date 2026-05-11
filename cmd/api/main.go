@@ -4,6 +4,7 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	"github.com/Verifieddanny/go-social/internal/db"
@@ -11,6 +12,7 @@ import (
 	"github.com/Verifieddanny/go-social/internal/env"
 	"github.com/Verifieddanny/go-social/internal/mailer"
 	"github.com/Verifieddanny/go-social/internal/store"
+	"github.com/Verifieddanny/go-social/internal/store/cache"
 )
 
 const currentVersion = "0.0.1"
@@ -43,7 +45,7 @@ func main() {
 		apiUrl:      env.GetEnv("EXTERNAL_URL", "localhost:8080"),
 		frontendUrl: env.GetEnv("FRONTEND_URL", "http://localhost:3000"),
 		db: dbConfig{
-			addr:         env.GetEnv("DB_ADDR", "postgres://admin:adminpassword@localhost/social?sslmode=disable"),
+			addr:         env.GetEnv("DB_ADDR", ""),
 			maxOpenConns: env.GetEnvAsInt("DM_MAX_OPEN_CONNS", 30),
 			maxIdleConns: env.GetEnvAsInt("DM_MAX_IDLE_CONNS", 30),
 			maxIdleTime:  env.GetEnv("DM_MAX_IDLE_TIME", "15m"),
@@ -52,7 +54,7 @@ func main() {
 			exp:       time.Hour * 24 * 3,
 			fromEmail: env.GetEnv("FROM_EMAIL", "onboarding@resend.dev"),
 			resend: resendConfig{
-				apiKey: env.GetEnv("RESEND_API_KEY", "re_7ee8e6KB_8RgFbCdzFubRoA4aZqp2pdcB"),
+				apiKey: env.GetEnv("RESEND_API_KEY", ""),
 			},
 		},
 		auth: authConfig{
@@ -65,6 +67,12 @@ func main() {
 				exp:    time.Hour * 24 * 3,
 				iss:    "gophersocial",
 			},
+		},
+		redisCfg: redisCfg{
+			addr:    env.GetEnv("REDIS_ADDR", "localhost:6379"),
+			pw:      env.GetEnv("REDIS_PW", ""),
+			db:      env.GetEnvAsInt("REDIS_DB", 0),
+			enabled: env.GetEnvAsBoolean("REDIS_ENABLED", true),
 		},
 	}
 
@@ -83,7 +91,15 @@ func main() {
 	defer db.Close()
 	logger.Info("Database connection pool established")
 
+	// cache
+	var rdb *redis.Client
+	if cfg.redisCfg.enabled {
+		rdb = cache.NewRedisClient(cfg.redisCfg.addr, cfg.redisCfg.pw, cfg.redisCfg.db)
+		logger.Info("redis cache connection established")
+	}
+
 	store := store.NewStorage(db)
+	cacheStorage := cache.NewRedisStorage(rdb)
 	mailer := mailer.NewResend(cfg.mail.resend.apiKey, cfg.mail.fromEmail)
 
 	jwtAuthenticator := auth.NewJWTAuthenticator(cfg.auth.token.secret, cfg.auth.token.iss, cfg.auth.token.iss)
@@ -91,6 +107,7 @@ func main() {
 	app := &application{
 		config:        cfg,
 		store:         store,
+		cacheStorage:  cacheStorage,
 		logger:        logger,
 		mailer:        mailer,
 		authenticator: jwtAuthenticator,

@@ -124,6 +124,7 @@ func (app *application) getPostHandler(w http.ResponseWriter, r *http.Request) {
 //	@Success		204
 //	@Failure		400	{object}	error
 //	@Failure		404	{object}	error
+//	@Failure		403	{object}	error
 //	@Failure		500	{object}	error
 //	@Security		ApiKeyAuth
 //	@Router			/posts/{id} [delete]
@@ -170,6 +171,7 @@ func (app *application) deletePostHandler(w http.ResponseWriter, r *http.Request
 //	@Success		200		{object}	store.Post
 //	@Failure		400		{object}	error
 //	@Failure		401		{object}	error
+//	@Failure		403		{object}	error
 //	@Failure		404		{object}	error
 //	@Failure		500		{object}	error
 //	@Security		ApiKeyAuth
