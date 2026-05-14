@@ -15,7 +15,7 @@ type UserStore struct {
 	rdb *redis.Client
 }
 
-const UserExpTime = time.Hour * 24 * 3
+const UserExpTime = time.Hour
 
 func (s *UserStore) Get(ctx context.Context, userID uuid.UUID) (*store.User, error) {
 	cacheKey := fmt.Sprintf("user-%v", userID)
@@ -25,7 +25,7 @@ func (s *UserStore) Get(ctx context.Context, userID uuid.UUID) (*store.User, err
 	if err == redis.Nil {
 		return nil, nil
 	}
-	
+
 	if err != nil {
 		return nil, err
 	}

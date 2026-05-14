@@ -35,7 +35,6 @@ func (app *application) getUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-
 	user, err := app.getUser(r.Context(), userID)
 	if err != nil {
 		switch err {
